@@ -59,7 +59,7 @@
 		const stream = new EventSource('/speedtest/down');
 		stream.addEventListener('message', (event) => {
 			running = true;
-			const now = event.timeStamp;
+			const now = Date.now();
 			const eventData: string = event.data;
 
 			if (eventData === 'done') {
