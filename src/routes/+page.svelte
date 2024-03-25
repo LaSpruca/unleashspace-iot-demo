@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Writable } from 'svelte/store';
-	import { writable, get } from 'svelte/store';
+	import type { Readable, Writable } from 'svelte/store';
+	import { writable, get, derived } from 'svelte/store';
 	import { LineChart, ScaleTypes, type LineChartOptions } from '@carbon/charts-svelte';
 	import type { SubmitRequest } from '$lib/upload';
 
@@ -10,6 +10,26 @@
 	let uploaded = false;
 
 	const data: Writable<{ date: Date; value: number; group: string }[]> = writable([]);
+	const averages: Readable<{ date: Date; value: number; group: string }[]> = derived(
+		[data],
+		([data]) => {
+			if (data.length < 1) {
+				return [];
+			}
+
+			let averages = new Array(data.length);
+			for (let i = 0; i < data.length; i++) {
+				let total = 0;
+				for (let j = 0; j <= i; j++) {
+					total += data[j].value;
+				}
+				averages.push({ ...data[i], value: total / (i + 1) });
+			}
+			return averages;
+		}
+	);
+
+	$: console.log($data);
 
 	let options: LineChartOptions = {
 		title: 'Downlead Speed',
@@ -34,12 +54,6 @@
 			enabled: false
 		}
 	};
-
-	$: {
-		if ($data.length > 1) {
-			options.axes!.bottom!.domain = [$data[0].date, $data[$data.length - 1].date];
-		}
-	}
 
 	async function runTest() {
 		const stream = new EventSource('/speedtest/down');
@@ -113,7 +127,7 @@
 			>Speed: <span class="text-cie-orange">{average.toFixed(2)} mbps</span></span
 		>
 
-		<LineChart data={$data} {options} />
+		<LineChart data={$averages.filter((x) => typeof x !== 'undefined')} {options} />
 		<button
 			class="text-bold rounded bg-cie-orange p-5 text-xl font-bold text-white transition-all duration-100 disabled:grayscale"
 			on:click={uploadResults}
