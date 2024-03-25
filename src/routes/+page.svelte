@@ -73,7 +73,7 @@
 			const { time: requestTime } = JSON.parse(line);
 			const time = Math.max(now - requestTime, 1) / 1000;
 
-			const speed = (eventData.length * 8) / 1_000_000 / time;
+			const speed = (eventData.length + 8) / 125000 / time;
 			console.log({ speed, time, size: eventData.length });
 			data.update((data) => {
 				data.push({ date: new Date(), value: speed, group: 'Download' });
