@@ -25,11 +25,11 @@
 				}
 				averages.push({ ...data[i], value: total / (i + 1) });
 			}
-			return averages;
+			return averages.filter((x) => typeof x !== 'undefined');
 		}
 	);
 
-	$: console.log($data);
+	$: average = $averages[$averages.length - 1]?.value ?? 0;
 
 	let options: LineChartOptions = {
 		title: 'Downlead Speed',
@@ -101,8 +101,6 @@
 		await fetch('/upload-results', { method: 'POST', body: JSON.stringify(request) });
 		uploaded = true;
 	}
-
-	$: average = $data.reduce((current, { value }) => current + value, 0);
 </script>
 
 <main class="flex h-screen flex-col items-center justify-center gap-2 bg-black">
@@ -127,7 +125,7 @@
 			>Speed: <span class="text-cie-orange">{average.toFixed(2)} mbps</span></span
 		>
 
-		<LineChart data={$averages.filter((x) => typeof x !== 'undefined')} {options} />
+		<LineChart data={$averages} {options} />
 		<button
 			class="text-bold rounded bg-cie-orange p-5 text-xl font-bold text-white transition-all duration-100 disabled:grayscale"
 			on:click={uploadResults}
