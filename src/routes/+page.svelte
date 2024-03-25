@@ -25,6 +25,7 @@
 		},
 		curve: 'curveMonotoneX',
 		height: '250px',
+		width: '75%',
 		theme: 'g100'
 	};
 
@@ -42,7 +43,7 @@
 		running = true;
 		done = false;
 
-		while (true) {
+		for (;;) {
 			const response = await reader.read();
 			const now = Date.now();
 
@@ -59,26 +60,28 @@
 			}
 
 			let responseBody;
-			try {
-				const lines = content.split('\n');
-				let item = lines[lines.length - 1];
-				if (!item || item == '') {
-					item = content;
+
+			for (const line of content.split('\n')) {
+				if (line.startsWith('{')) {
+					console.log(line);
+					try {
+						responseBody = JSON.parse(line);
+						const time = Math.max(now - responseBody.time, 1000) / 1000;
+						console.log(now - responseBody.time);
+
+						const speed = (response.value.length * 8) / 1000 / time;
+						console.log(speed);
+						data.update((data) => {
+							data.push({ date: new Date(), value: speed, group: 'Download' });
+							return data;
+						});
+					} catch (ex) {
+						console.error('Server sent invalid JSON', ex);
+					} finally {
+						break;
+					}
 				}
-				console.log(item);
-				responseBody = JSON.parse(item);
-			} catch (ex) {
-				console.error('Server sent invalid JSON', ex);
-				continue;
 			}
-			const time = Math.max(now - responseBody.time, 1000) / 1000;
-
-			const speed = (response.value.length * 8) / 1000 / time;
-
-			data.update((data) => {
-				data.push({ date: new Date(), value: speed, group: 'Download' });
-				return data;
-			});
 		}
 	}
 
