@@ -6,6 +6,8 @@
 
 	let running = false;
 	let done = false;
+	let average = 0;
+	let uploaded = false;
 
 	const data: Writable<{ date: Date; value: number; group: string }[]> = writable([]);
 
@@ -26,7 +28,11 @@
 		curve: 'curveMonotoneX',
 		height: '250px',
 		width: '75%',
-		theme: 'g100'
+		theme: 'g100',
+		animations: true,
+		legend: {
+			enabled: false
+		}
 	};
 
 	$: {
@@ -36,53 +42,30 @@
 	}
 
 	async function runTest() {
-		const request = await fetch('/speedtest/down');
-		const body = request.body!;
-		const reader = body.getReader();
-		const textEncoder = new TextDecoder();
-		running = true;
-		done = false;
-
-		for (;;) {
-			const response = await reader.read();
+		const stream = new EventSource('/speedtest/down');
+		stream.addEventListener('message', (event) => {
+			running = true;
 			const now = Date.now();
+			const eventData: string = event.data;
 
-			const content = textEncoder.decode(response.value);
-			if (response.done || content.endsWith('done')) {
+			console.log(event);
+			if (eventData === 'done') {
+				stream.close();
 				done = true;
-				console.log('Finnished');
-
 				return;
 			}
 
-			if (typeof content === 'undefined') {
-				continue;
-			}
+			const line = eventData.split('#')[0];
+			const { time: requestTime } = JSON.parse(line);
+			const time = Math.max(now - requestTime, 1) / 1000;
 
-			let responseBody;
-
-			for (const line of content.split('\n')) {
-				if (line.startsWith('{')) {
-					console.log(line);
-					try {
-						responseBody = JSON.parse(line);
-						const time = Math.max(now - responseBody.time, 1000) / 1000;
-						console.log(now - responseBody.time);
-
-						const speed = (response.value.length * 8) / 1000 / time;
-						console.log(speed);
-						data.update((data) => {
-							data.push({ date: new Date(), value: speed, group: 'Download' });
-							return data;
-						});
-					} catch (ex) {
-						console.error('Server sent invalid JSON', ex);
-					} finally {
-						break;
-					}
-				}
-			}
-		}
+			const speed = (eventData.length * 8) / 1_000_000 / time;
+			console.log({ speed, time, size: eventData.length });
+			data.update((data) => {
+				data.push({ date: new Date(), value: speed, group: 'Download' });
+				return data;
+			});
+		});
 	}
 
 	async function uploadResults() {
@@ -94,8 +77,7 @@
 		);
 
 		const request: SubmitRequest = {
-			averageDownload:
-				get(data).reduce((collector, { value }) => collector + value, 0) / get(data).length,
+			averageDownload: parseFloat(average.toFixed(2)),
 			date: get(data)[get(data).length - 1].date,
 			lat: location.coords.latitude,
 			long: location.coords.longitude,
@@ -103,7 +85,10 @@
 		};
 
 		await fetch('/upload-results', { method: 'POST', body: JSON.stringify(request) });
+		uploaded = true;
 	}
+
+	$: average = $data.reduce((current, { value }) => current + value, 0);
 </script>
 
 <main class="flex h-screen flex-col items-center justify-center gap-2 bg-black">
@@ -115,12 +100,18 @@
 			<div class="absolute h-full w-full animate-ping rounded-full border border-cie-orange"></div>
 			<span class="z-10 text-5xl font-bold text-cie-orange">Go</span>
 		</button>
+	{:else if uploaded}
+		<span class="text-3xl font-bold text-cie-orange">Uploaded</span>
+		<span class="text-xl text-white">Check the big screen</span>
 	{:else}
 		{#if !done}
 			<span class="text-3xl font-bold text-white">Running test</span>
 		{:else}
 			<span class="text-3xl font-bold text-white">Done</span>
 		{/if}
+		<span class="text-xl font-bold text-white"
+			>Speed: <span class="text-cie-orange">{average.toFixed(2)} mbps</span></span
+		>
 
 		<LineChart data={$data} {options} />
 		<button

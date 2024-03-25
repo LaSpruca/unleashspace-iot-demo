@@ -35,7 +35,7 @@ export const GET: RequestHandler = async () => {
 				}
 
 				if (iterations > MAX_ITERATIONS) {
-					controller.enqueue('done');
+					controller.enqueue('data: done\n\n');
 					ac.abort();
 					return;
 				}
@@ -43,7 +43,7 @@ export const GET: RequestHandler = async () => {
 				iterations++;
 
 				try {
-					controller.enqueue(`${payload}\n{ "time": ${Date.now()} }\n`);
+					controller.enqueue(`data: { "time": ${Date.now()} }#${payload}\n\n`);
 				} catch (ex) {
 					console.error('Could not enqueue message', ex);
 				}
