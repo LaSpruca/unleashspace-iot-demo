@@ -49,7 +49,7 @@
 		height: '250px',
 		width: '75%',
 		theme: 'g100',
-		animations: true,
+		animations: false,
 		legend: {
 			enabled: false
 		}
@@ -72,6 +72,7 @@
 			const line = eventData.split('#')[0];
 			const { time: requestTime } = JSON.parse(line);
 			const time = Math.max(now - requestTime, 1) / 1000;
+			console.log(time);
 
 			const speed = (eventData.length + 8) / 125000 / time;
 			console.log({ speed, time, size: eventData.length });
