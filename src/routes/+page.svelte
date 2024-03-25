@@ -59,10 +59,9 @@
 		const stream = new EventSource('/speedtest/down');
 		stream.addEventListener('message', (event) => {
 			running = true;
-			const now = Date.now();
+			const now = event.timeStamp;
 			const eventData: string = event.data;
 
-			console.log(event);
 			if (eventData === 'done') {
 				stream.close();
 				done = true;
@@ -71,11 +70,13 @@
 
 			const line = eventData.split('#')[0];
 			const { time: requestTime } = JSON.parse(line);
-			const time = Math.max(now - requestTime, 1) / 1000;
-			console.log(time);
+			const ms = Math.max(now - requestTime, 1);
+			const amountData = (eventData.length + 8) / 125000;
+			const mbpms = amountData / ms;
+			const speed = mbpms * 1000;
 
-			const speed = (eventData.length + 8) / 125000 / time;
-			console.log({ speed, time, size: eventData.length });
+			console.log({ ms, amountData, mbpms, speed });
+
 			data.update((data) => {
 				data.push({ date: new Date(), value: speed, group: 'Download' });
 				return data;
