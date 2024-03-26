@@ -1,6 +1,6 @@
 FROM rust:1.77-bookworm AS builder
 WORKDIR /build
-COPY . .
+COPY ./backend .
 RUN cargo build --release
 
 FROM debian:bookworm
