@@ -3,6 +3,7 @@
 	import { writable, get, derived } from 'svelte/store';
 	import { LineChart, ScaleTypes, type LineChartOptions } from '@carbon/charts-svelte';
 	import type { SubmitRequest } from '$lib/upload';
+	import { PUBLIC_SPEEDTEST_URL } from '$env/static/public';
 
 	let running = false;
 	let done = false;
@@ -56,7 +57,7 @@
 	};
 
 	async function runTest() {
-		const stream = new EventSource('/speedtest/down');
+		const stream = new EventSource(PUBLIC_SPEEDTEST_URL + "?nocache=" + Math.random());
 		stream.addEventListener('message', (event) => {
 			running = true;
 			const now = Date.now();
