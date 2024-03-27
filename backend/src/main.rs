@@ -10,21 +10,39 @@ use rand::{thread_rng, Rng};
 use std::{convert::Infallible, time::Duration};
 use tokio::{sync::mpsc::channel, time::sleep};
 use tokio_stream::wrappers::ReceiverStream;
-use tower_http::cors::CorsLayer;
+use tower_http::{
+    cors::CorsLayer,
+    trace::{self, TraceLayer},
+};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/download", get(download_test)).layer(
-        CorsLayer::new()
-            .allow_origin([
-                "http://localhost:5173".parse().unwrap(),
-                "https://unleashspace-iot-demo.vercel.app".parse().unwrap(),
-            ])
-            .allow_methods(Method::GET),
-    );
+    match std::env::var("RUST_LOG") {
+        Err(_) => {
+            std::env::set_var("RUST_LOG", "info");
+        }
+        Ok(_) => {}
+    }
+    tracing_subscriber::fmt::init();
+
+    let app = Router::new()
+        .route("/download", get(download_test))
+        .layer(
+            CorsLayer::new()
+                .allow_origin([
+                    "http://localhost:5173".parse().unwrap(),
+                    "https://unleashspace-iot-demo.vercel.app".parse().unwrap(),
+                ])
+                .allow_methods(Method::GET),
+        )
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
+        );
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Starting server on 0.0.0.0:3000");
     axum::serve(listener, app).await.unwrap();
 }
 
