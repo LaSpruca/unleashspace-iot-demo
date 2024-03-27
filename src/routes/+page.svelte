@@ -57,7 +57,7 @@
 	};
 
 	async function runTest() {
-		const stream = new EventSource(PUBLIC_SPEEDTEST_URL + "?nocache=" + Math.random());
+		const stream = new EventSource(PUBLIC_SPEEDTEST_URL + '?nocache=' + Math.random());
 		stream.addEventListener('message', (event) => {
 			running = true;
 			const now = Date.now();
@@ -74,12 +74,22 @@
 			const ms = Math.max(now - requestTime, 1);
 			const amountData = (eventData.length + 8) / 125000;
 			const mbpms = amountData / ms;
-			const speed = mbpms * 1000;
+			const speed = mbpms * 100;
 
-			console.log({ ms, amountData, mbpms, speed });
+			console.log({
+				eventDataLength: eventData.length,
+				ms,
+				amountData,
+				mbpms,
+				speed: speed * 100
+			});
 
 			data.update((data) => {
-				data.push({ date: new Date(), value: speed, group: 'Download' });
+				data.push({
+					date: new Date(),
+					value: speed * 1000,
+					group: 'Download'
+				});
 				return data;
 			});
 		});
@@ -89,6 +99,7 @@
 		if (!navigator.geolocation) {
 			return;
 		}
+
 		const location: GeolocationPosition = await new Promise((res, rej) =>
 			navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true })
 		);
